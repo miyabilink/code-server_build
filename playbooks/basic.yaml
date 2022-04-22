@@ -1,0 +1,70 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Create student User
+      user:
+        name: student
+        password: "{{ 'Password' | password_hash('sha256') }}"
+        groups: sudo
+        shell: /bin/bash
+        state: present
+      become: yes
+    - name: ssh-client config
+      copy:
+        src: /root/.ssh
+        dest: /home/student
+        owner: student
+        group: student
+    - name: Clone environment
+      git:
+        repo: 'https://github.com/miyabilink/code-server_build.git'
+        dest: /tmp/code-server
+        version: main
+      become_user: student
+    - name: Copy environment
+      copy:
+        src: "{{ item }}"
+        dest: /home/student
+        owner: student
+        group: student
+      with_fileglob:
+        - "/tmp/code-server/student/*"
+    - name: Install Docker-ce relation package
+      apt:
+        name:
+            - apt-transport-https
+            - ca-certificates
+            - curl
+            - software-properties-common
+    - name: Key Download # Ignore warning(get_url module recommend)
+      shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+    - name: Add Repository
+      shell: sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    - name: Apt Update
+      apt:
+        update_cache: yes
+      become: yes
+      become_method: su
+    - name: Docker-CE Install
+      apt:
+        name: docker-ce
+      become: yes
+    - name: Docker Enable
+      systemd:
+        name: docker
+        enabled: yes
+        state: restarted
+      become: yes
+    - name: Student belong to docker group
+      user:
+        name: student
+        groups: docker
+        append: yes
+    - name: Compose Download
+      shell: curl -L "https://github.com/docker/compose/releases/download/1.26.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+      become: yes
+    - name: Compose Command executable
+      file:
+        path: /usr/local/bin/docker-compose
+        mode: 0755

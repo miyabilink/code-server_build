@@ -1,0 +1,29 @@
+---
+- hosts: localhost
+  gather_facts: false
+  vars:
+    - ansible_become: yes
+    - ansible_become_user: student
+  tasks:
+    - name: code-server Install
+      shell: curl -fsSL https://code-server.dev/install.sh | sh
+    - name: code-server build
+      shell: sudo systemctl enable --now code-server@$USER
+      become: yes
+    - name: loginctl
+      shell: loginusername=student ; loginctl enable-linger $loginusername
+    - name: Set Config file
+      copy:
+        src: /home/student/config.yaml
+        dest: /home/student/.config/code-server/config.yaml
+        owner: student
+        group: student
+    - name: Restart code-server
+      remote_user: student
+      shell: sudo -u student XDG_RUNTIME_DIR=/run/user/$(id -u student) systemctl --user restart code-server
+    - name: Install Python extention tools
+      shell: code-server --install-extension ms-python.python
+    - name: Install YAML extention tools
+      shell: code-server --install-extension redhat.vscode-yaml
+    - name: Install Docker extention tools
+      shell: code-server --install-extension ms-azuretools.vscode-docker
