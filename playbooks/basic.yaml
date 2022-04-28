@@ -7,6 +7,7 @@
         name: student
         password: "{{ 'Password' | password_hash('sha256') }}"
         shell: /bin/bash
+        groups: sudo
         state: present
       become: yes
     - name: ssh-client config
