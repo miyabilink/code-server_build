@@ -6,7 +6,6 @@
       user:
         name: student
         password: "{{ 'Password' | password_hash('sha256') }}"
-        groups: sudo
         shell: /bin/bash
         state: present
       become: yes
